@@ -1,0 +1,15 @@
+global_land_mask
+loguru
+matplotlib
+numpy
+onnx
+pandas
+requests
+scikit-image
+scikit-learn
+seaborn
+tensorboard
+torchinfo
+tqdm
+netCDF4
+xarray
