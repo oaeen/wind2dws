@@ -34,23 +34,23 @@ def get_dataloader(config=Config()):
 
 def get_dataset(config=Config()):
     logger.info(f"loading data...")
-    X_global_train, X_global_test = load_X_global_wind(config)
+    X_large_train, X_large_test = load_X_large_wind(config)
     X_local_train, X_local_test = load_X_local_wind(config)
 
     y_train, y_test = load_y_spec(config)
     train_dataset = Seq_Dataset(
-        X_global_train,
+        X_large_train,
         X_local_train,
         y_train,
-        config.global_wind_window,
+        config.large_wind_window,
         config.local_wind_window,
         steps=config.train_steps,
     )
     test_dataset = Seq_Dataset(
-        X_global_test,
+        X_large_test,
         X_local_test,
         y_test,
-        config.global_wind_window,
+        config.large_wind_window,
         config.local_wind_window,
         steps=config.test_steps,
     )
@@ -58,10 +58,10 @@ def get_dataset(config=Config()):
     return train_dataset, test_dataset
 
 
-def load_X_global_wind(config=Config()):
+def load_X_large_wind(config=Config()):
 
-    wind_dir = f"{config.processed_data_dir}/ERA5/input/wind_input_{config.global_wind_location}"
-    logger.success(f"load global wind data from {wind_dir}")
+    wind_dir = f"{config.processed_data_dir}/ERA5/input/wind_input_{config.large_wind_location}"
+    logger.success(f"load large wind data from {wind_dir}")
 
     X_wind_train = np.load(f"{wind_dir}/train.npy")
     X_wind_test = np.load(f"{wind_dir}/test.npy")

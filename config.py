@@ -16,21 +16,20 @@ class Config:
     def __init__(self):
         # data settings
         self.y_data_source = "IOWAGA"  # IOWAGA or ERA5
-        self.y_location = "W1205N325"  # W1205N325
+        self.y_location = None
         self.y_data_desc = "spec_output"  # spec_output
 
         self.local_wind_location = None
-        self.global_wind_location = None
+        self.large_wind_location = None
 
-        self.X_spec_scale_bins = "none"  # "freq" or "freq_and_dir" or None
-        self.y_scale_desc = "minmax_freq_and_dir"  # "minmax_freq_and_dir" or "minmax_freq" or "log" or "none"
-        self.current_freq_index = -1
+        self.y_scale_desc = "minmax_freq_and_dir"
+        self.freq_num = 36
+        self.out_in = 37
 
-        self.H_freq_lim = 22
-        self.L_freq_lim = 8
-        self.global_wind_window = 8 * 10
-        self.local_wind_window = 12
-        self.train_steps = 7
+        self.compile_enabled = True
+        self.large_wind_window = 8 * 10
+        self.local_wind_window = 8 * 3
+        self.train_steps = 1
         self.test_steps = 1
         self.input_channels = None
 
@@ -38,7 +37,7 @@ class Config:
         self.ensemble_models_num = 5
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.epochs = 100
-        self.batch_size = 80
+        self.batch_size = 16
         self.patience = 7
         self.learning_rate = 1e-4
         self.weight_decay = 0.01
@@ -46,21 +45,21 @@ class Config:
         self.optimizer = Lion  # Lion or Adam torch.optim.Adam
         self.output_size = 1
 
-        self.network_type = "WindNet_X"
-        self.module_filename = f"models.{self.network_type}"
+        self.model_name = "Wendy"
+        self.module_filename = f"models.{self.model_name}"
 
         self.comment = None
 
         # Path & Dir
-        self.raw_data_dir = "F:/Raw"
-        self.processed_data_dir = "F:/Processed"
+        self.raw_data_dir = "/mnt/f/Raw"
+        self.processed_data_dir = "/mnt/e/Processed"
         self.results_root_dir = f"{os.getcwd()}/results"
 
     def set_comment(self):
-        self.comment = f"{self.network_type}1010_Seele_{self.y_location}_scale_{self.y_scale_desc}_TP{self.global_wind_window}"
+        self.comment = f"{self.model_name}_{self.y_location}"
 
     def set_model(self):
-        self.module_filename = f"models.{self.network_type}"
+        self.module_filename = f"models.{self.model_name}"
 
     def get_y_data_dir(self, y_location=None):
         if y_location is None:

@@ -43,8 +43,9 @@ if __name__ == "__main__":
     config.y_scale_desc = "none"
     config.y_data_source = "ERA5"
     era5_points = {
-        "PointA": (15, 115),  # 15°N, 115°W
-        "PointB": (5, -120),  # 5°N, 120°W
+        # "PointA": (5, -120),  # 5°N, 120°W
+        # "PointB": (15, 115),  # 15°N, 115°W
+        "PointC": (-50, 165),  # 50°S, 165°E
     }
     for key, value in era5_points.items():
         config.y_location = key

@@ -9,7 +9,7 @@ sys.path.append(os.getcwd())
 from utils.metrics.spectra_info import generate_freq
 
 # 读取已经保存的频谱数据
-locations = ["PointA", "PointB", "CDIP028"]
+locations = ["PointC"]  # "PointA", "PointB", "PointC", "CDIP028"
 
 l_color = "#c93756"
 g_color = "#f2be45"
@@ -19,11 +19,9 @@ x_color = "#21a675"
 def get_freq_cc(loc, type):
     """
     loc: str, location name
-    type: str, "G", global  or "L" local or "X" mixed
     """
-    # assert type in ["G", "L", "X"]
 
-    cc_dir = f"WindNet_{type}1010_Seele_{loc}_scale_minmax_freq_and_dir_TP80"
+    cc_dir = f"Wendy{type}_Full_{loc}_run1"
     cc_filename = f"freq_cc.csv"
     cc_path = f"{os.getcwd()}/results/evaluate/{loc}/{cc_dir}/{cc_filename}"
     print(cc_path)
@@ -33,15 +31,14 @@ def get_freq_cc(loc, type):
 
 
 for loc in locations:
-    type_prefix = "ERA5_" if loc != "CDIP028" else ""
-    freq_g = get_freq_cc(loc, type_prefix + "G")
-    freq_l = get_freq_cc(loc, type_prefix + "L")
-    freq_x = get_freq_cc(loc, type_prefix + "X")
+    freq_large = get_freq_cc(loc, "_Large")
+    freq_local = get_freq_cc(loc, "_Local")
+    freq_x = get_freq_cc(loc, "")
 
-    freq_indices = np.arange(1, len(freq_g) + 1)
+    freq_indices = np.arange(1, len(freq_large) + 1)
 
     freq = None
-    if loc in ["PointA", "PointB"]:
+    if loc in ["PointA", "PointB", "PointC"]:
         freq = generate_freq(spec_source_type="ERA5")
 
     if loc == "CDIP028":
@@ -55,12 +52,14 @@ for loc in locations:
     plt.figure(figsize=(12, 6))
     plt.bar(
         freq_indices - bar_width,
-        freq_l,
+        freq_local,
         width=bar_width,
         label="Local Scale",
         color=l_color,
     )
-    plt.bar(freq_indices, freq_g, width=bar_width, label="Large Scale", color=g_color)
+    plt.bar(
+        freq_indices, freq_large, width=bar_width, label="Large Scale", color=g_color
+    )
     plt.bar(
         freq_indices + bar_width,
         freq_x,
@@ -69,20 +68,21 @@ for loc in locations:
         color=x_color,
     )
 
-    plt.xlabel("Frequency (Hz)", fontdict={"fontsize": 14})
-    plt.ylabel("Correlation Coefficient", fontdict={"fontsize": 14})
+    plt.xlabel("Frequency (Hz)", fontdict={"fontsize": 18})
+    plt.ylabel("Correlation Coefficient", fontdict={"fontsize": 18})
 
     replace_dict = {
         "PointA": "Point A",
         "PointB": "Point B",
-        "CDIP028": "Point C",
+        "PointC": "Point C",
+        "CDIP028": "Point D",
     }
     title = f"Different Frequency Correlation Coefficients at {replace_dict[loc]}"
 
-    plt.title(title, fontdict={"fontsize": 14})
-    plt.xticks(freq_indices, labels=np.around(freq, 3), rotation=45, fontsize=12)
-    plt.yticks(fontsize=12)
-    plt.legend(prop={"size": 12}, framealpha=0.3)
+    plt.title(title, fontdict={"fontsize": 18})
+    plt.xticks(freq_indices, labels=np.around(freq, 3), rotation=45, fontsize=16)
+    plt.yticks(fontsize=16)
+    plt.legend(prop={"size": 16}, framealpha=0.3)
     plt.grid(axis="y", linestyle="--", alpha=0.6)
     plt.tight_layout()
     # plt.show()

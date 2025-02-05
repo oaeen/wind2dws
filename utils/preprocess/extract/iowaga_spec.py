@@ -65,25 +65,5 @@ if __name__ == "__main__":
     save_dir = f"{config.processed_data_dir}/IOWAGA/extract"
 
     data_dir = f"{config.raw_data_dir}/IOWAGA/SPEC_AT_BUOYS"
-    for buyo_id in ["CDIP028", "CDIP045", "46219", "CDIP093", "CDIP107"]:
+    for buyo_id in ["CDIP028"]:  # aka PointD
         extract_wave_data(buyo_id, data_dir, save_dir)
-
-    # data_dir = f"{config.raw_data_dir}/IOWAGA/SPEC_NW139TO100"
-    # for loc in [
-    #     "W1215N335",
-    #     "W1210N330",
-    #     "W1205N330",
-    #     "W1205N325",
-    #     "W1200N320",
-    #     "W1195N320",
-    #     "W1190N320",
-    # ]:
-    #     extract_wave_data(loc, data_dir, save_dir)
-
-    for area, pos in [
-        ("SW", "W1200S480"),
-        ("NE100to139", "E1150N065"),
-        ("NW139to100", "W1200N020"),
-    ]:
-        data_dir = f"{config.raw_data_dir}/IOWAGA/SPEC_{area}"
-        extract_wave_data(pos, data_dir, save_dir)

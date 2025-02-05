@@ -4,13 +4,11 @@ import time
 
 import numpy as np
 import torch
-import torch.cuda.amp as amp
 import torchinfo
 from loguru import logger
 from scipy.stats import pearsonr
 from torch.utils.tensorboard import SummaryWriter
-import torch.nn as nn
-
+from tqdm import tqdm
 from config import Config
 from models.model import load_model, save_model
 from utils.data_loaders.helper import get_dataloader
@@ -18,29 +16,20 @@ from utils.metrics.perf_recorder import *
 
 
 def train(model, dataloader, optimizer, criterion, config=Config()):
-    """
-    训练函数, 返回训练损失(MSE)
-    """
     model.train()
     train_loss = 0
-    scaler = amp.GradScaler()  # 创建梯度缩放器
-
-    for gw, lw, targets in dataloader:
+    scaler = torch.amp.GradScaler(device="cuda")
+    for large, local, targets in tqdm(dataloader, desc="Training"):
         optimizer.zero_grad()
-        gw = gw.to(config.device)
-        lw = lw.to(config.device)
+        large = large.to(config.device)
+        local = local.to(config.device)
         targets = targets.to(config.device)
 
-        # 前向传播（使用 autocast 上下文进行自动混合精度计算）
-        with amp.autocast():
-            outputs = model(gw, lw)
+        with torch.autocast(device_type="cuda"):
+            outputs = model(large, local)
             loss = criterion(outputs, targets)
-
-        # 反向传播（使用 GradScaler 缩放梯度）
         scaler.scale(loss).backward()
-        # 更新模型参数
         scaler.step(optimizer)
-        # 更新缩放器
         scaler.update()
 
         train_loss += loss.item()
@@ -50,76 +39,60 @@ def train(model, dataloader, optimizer, criterion, config=Config()):
 
 @torch.no_grad()
 def test(model, dataloader, criterion, config=Config()):
-    """
-    验证函数, 返回验证损失(MSE),MAE,相关系数
-    """
     model.eval()
     val_loss = 0
-    all_outputs = []
-    all_targets = []
 
-    for gw, lw, targets in dataloader:
-        gw = gw.to(config.device)
-        lw = lw.to(config.device)
+    for large, local, targets in tqdm(dataloader, desc="Validating"):
+        large = large.to(config.device)
+        local = local.to(config.device)
         targets = targets.to(config.device)
-
-        outputs = model(gw, lw)
+        outputs = model(large, local)
         loss = criterion(outputs, targets)
         val_loss += loss.item()
 
-        all_outputs.append(outputs.cpu().numpy())
-        all_targets.append(targets.cpu().numpy())
-
-    all_outputs = np.concatenate(all_outputs, axis=0)
-    all_targets = np.concatenate(all_targets, axis=0)
-
     val_loss /= len(dataloader)
-    R, _ = pearsonr(all_targets.flatten(), all_outputs.flatten())
-    mse = mean_squared_error(all_targets.flatten(), all_outputs.flatten())
 
     val_loss_dict = {
         "loss": val_loss,
-        "R": R,
-        "MSE": mse,
+        "R": 0.0,  # placeholder
     }
 
     return val_loss_dict
 
 
-def build_prediction_model(config=Config()):
+def build_model(config=Config()):
     logger.info("Training model...")
+    finetune = False
 
-    model, best_epoch, best_loss = load_model(config)
+    model_filename = "best_model_finetune.pt"
+    if os.path.exists(f"{config.get_model_dir()}/{model_filename}"):
+        logger.warning(f"Model file {model_filename} exists, loading the model.")
+        model, best_epoch, best_loss = load_model(model_filename, config=config)
+        criterion = config.criterion.to(config.device)
+        finetune = True
+    else:
+        logger.warning(
+            f"Model file {model_filename} does not exist, training from scratch."
+        )
+        model, best_epoch, best_loss = load_model(config=config)
+        criterion = torch.nn.MSELoss().to(config.device)
+
     backup_model_and_config(config)
 
     writer = SummaryWriter(log_dir=config.get_log_dir())
-    try:
-        global_wind = torch.randn(
-            config.batch_size, config.global_wind_window, 2, 72, 60
-        )
-        local_wind = torch.randn(config.batch_size, config.local_wind_window, 2, 81, 81)
-        # writer.add_graph(model, input_to_model=(wind_input))
-        torchinfo.summary(
-            model, input_size=[global_wind.shape, local_wind.shape], depth=1
-        )
-    except Exception as e:
-        logger.error(f"torchinfo.summary error:{e}")
-
     train_dataloader, test_dataloader = get_dataloader(config)
-    criterion = nn.MSELoss().to(config.device)
     optimizer = config.optimizer(
         model.parameters(),
         lr=config.learning_rate,
         weight_decay=config.weight_decay,
     )
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode="min", factor=0.5, patience=2, min_lr=1e-7
+        optimizer, mode="min", factor=0.2, patience=1, min_lr=1e-7
     )
-
+    scheduler.step(best_loss)
     no_improvement_count = 0
-    criterion_change = False
 
-    for epoch in range(best_epoch, config.epochs):
+    for epoch in range(best_epoch + 1, config.epochs):
         t0 = time.time()
 
         train_loss = train(model, train_dataloader, optimizer, criterion, config)
@@ -135,16 +108,17 @@ def build_prediction_model(config=Config()):
             best_epoch = epoch
             no_improvement_count = 0
             save_model(
-                model=model, current_epoch=epoch, best_loss=best_loss, config=config
+                model=model,
+                current_epoch=epoch,
+                best_loss=best_loss,
+                best=True,
+                finetune=finetune,
+                config=config,
             )
             logger.success(f"test loss improved, saving the current model.")
         else:
             no_improvement_count += 1
             logger.info(f"No improvement for {no_improvement_count} epochs.")
-
-            if no_improvement_count >= config.patience:
-                logger.success("Early stopping triggered, stopping the training.")
-                break
 
         report_perf(
             writer=writer,
@@ -157,25 +131,39 @@ def build_prediction_model(config=Config()):
             lr=scheduler.get_last_lr()[0],
         )
 
-        if no_improvement_count > 0 and not criterion_change:
+        if (no_improvement_count == 7) and not finetune:
             criterion = config.criterion.to(config.device)
-            criterion_change = True
-            logger.warning("Criterion changed to Relative Loss Next epoch.")
+            finetune = True
+            logger.warning("Criterion changed to Adaptive Loss Next epoch.")
             best_loss = float("inf")
+            no_improvement_count = 0
+            optimizer = config.optimizer(
+                model.parameters(),
+                lr=config.learning_rate,
+                weight_decay=config.weight_decay,
+            )
+            scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+                optimizer, mode="min", factor=0.2, patience=2, min_lr=1e-7
+            )
+            scheduler.step(best_loss)
+
+        if no_improvement_count > config.patience:
+            logger.success("Early stopping triggered, stopping the training.")
+            break
 
         if val_loss >= best_loss * 50 or np.isnan(R):
             logger.error(
                 f"test loss is NaN, try to load the last best model and reduce the learning rate."
             )
             logger.warning(f"Learning rate decayed to {scheduler.get_last_lr()[0]/10}")
-            model, best_epoch, best_loss = load_model(config)
+            model, best_epoch, best_loss = load_model(config=config)
             optimizer = config.optimizer(
                 model.parameters(),
                 lr=scheduler.get_last_lr()[0] / 10,
                 weight_decay=config.weight_decay,
             )
             scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-                optimizer, mode="min", factor=0.5, patience=2, min_lr=1e-7
+                optimizer, mode="min", factor=0.2, patience=2, min_lr=1e-7
             )
 
     torch.cuda.empty_cache()
@@ -185,4 +173,4 @@ def build_prediction_model(config=Config()):
 
 if __name__ == "__main__":
     config = Config()
-    build_prediction_model(config)
+    build_model(config)

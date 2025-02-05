@@ -13,9 +13,10 @@ class StudyArea:
     def __init__(self) -> None:
         # 添加实心圆点和注释
         self.Point_locations = {
-            "Point A": (115, 15),
-            "Point B": (240, 5),
-            "Point C": (-118.6 + 360, 33.9),
+            "Point A": (240, 5),
+            "Point B": (115, 15),
+            "Point C": (165, -50),
+            "Point D": (-118.6 + 360, 33.9),
         }
 
 

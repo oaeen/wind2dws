@@ -89,43 +89,20 @@ class DoubleConv(nn.Module):
 class ConvBlock(nn.Module):
     """(convolution => [BN] => swish)"""
 
-    def __init__(self, in_channels, out_channels, groups=1):
+    def __init__(self, in_channels, out_channels, pool=True):
         super().__init__()
-
+        self.pool = pool
         self.conv = nn.Sequential(
-            nn.Conv2d(
-                in_channels, out_channels, kernel_size=3, padding=1, groups=groups
-            ),
+            nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
             nn.BatchNorm2d(out_channels),
             nn.SiLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2),
         )
+        self.max_pool_2d = nn.MaxPool2d(kernel_size=2, stride=2)
 
     def forward(self, x):
-        return self.conv(x)
-
-
-class DSConvBlock(nn.Module):
-    """(convolution => [BN] => swish)"""
-
-    def __init__(self, in_channels, out_channels):
-        super().__init__()
-        self.depthwise = nn.Conv2d(
-            in_channels, in_channels, kernel_size=3, padding=1, groups=in_channels
-        )
-        self.depthwise_bn = nn.BatchNorm2d(in_channels)
-        self.pointwise = nn.Conv2d(in_channels, out_channels, kernel_size=1)
-        self.pointwise_bn = nn.BatchNorm2d(out_channels)
-        self.relu = nn.SiLU()
-        self.maxpool = nn.MaxPool2d(kernel_size=2, stride=2)
-
-    def forward(self, x):
-        x = self.depthwise(x)
-        x = self.depthwise_bn(x)
-        x = self.pointwise(x)
-        x = self.pointwise_bn(x)
-        x = self.relu(x)
-        x = self.maxpool(x)
+        x = self.conv(x)
+        if self.pool:
+            x = self.max_pool_2d(x)
         return x
 
 
@@ -173,3 +150,23 @@ class OutConv(nn.Module):
 
     def forward(self, x):
         return self.conv(x)
+
+
+class Wind2Spec(nn.Module):
+    def __init__(self, input_channels=16, freq_num=30):
+        super(Wind2Spec, self).__init__()
+        self.freq_num = freq_num
+        self.conv1 = ConvBlock(input_channels, 128)
+        self.conv2 = ConvBlock(128, 256)
+        self.conv3 = ConvBlock(256, 512)
+        self.conv4 = ConvBlock(512, freq_num * 24)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.conv2(x)
+        x = self.conv3(x)
+        x = self.conv4(x)
+        x = x.view(x.size(0), x.size(1), -1)
+        x = x.permute(0, 2, 1)
+        x = x.view(x.size(0), -1, self.freq_num, 24)
+        return x

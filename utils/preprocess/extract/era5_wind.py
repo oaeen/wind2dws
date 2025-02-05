@@ -94,54 +94,47 @@ def extract_wind_data(data_dir, save_dir, lat_range, lon_range, pool_kernel_size
 if __name__ == "__main__":
     config = Config()
     data_dir = f"{config.raw_data_dir}/ERA5/Wind_Global/data"
-    save_dir = f"{config.processed_data_dir}/ERA5/extract/wind_extracted"
 
-    era5_points = {
-        "PointA": (15, 115),  # 15°N, 115°E
-        "PointB": (5, -120),  # 5°N, 120°W
+    # local wind inputs
+    # target_points = {
+    #     "PointA": (5, -120),  # 5°N, 120°W
+    #     "PointB": (15, 115),  # 15°N, 115°E
+    #     "PointC": (-50, 165),  # 50°S, 165°E
+    #     "CDIP028": (34, -118.5),  # 34°N, 118.5°W aka PointD
+    # }
+
+    # for key, value in target_points.items():
+    #     loc_name = key
+    #     target_lat, target_lon = value
+    #     logger.info(
+    #         f"Extracting wind data for {loc_name} at {target_lat}, {target_lon}"
+    #     )
+    #     save_dir = f"{config.processed_data_dir}/ERA5/extract/wind_extracted_{loc_name}"
+    #     lat_range = [target_lat + 20, target_lat - 20]
+    #     lon_range = [target_lon - 20, target_lon + 20]
+    #     extract_wind_data(data_dir, save_dir, lat_range, lon_range)
+
+    # large wind inputs
+    point_configs = {
+        # "PointACD": {"lat_range": [71.5, -72], "lon_range": [150.5, -90], "suffix": ""},
+        # "PointB": {
+        #     "lat_range": [71.5, -72],
+        #     "lon_range": [90.5, -150],
+        #     "suffix": "_PB",
+        # },
+        "PointC": {
+            "lat_range": [71.5, -72],
+            "lon_range": [90.5, -90],
+            "suffix": "_Full",
+        },
     }
 
-    for key, value in era5_points.items():
-        loc_name = key
-        target_lat, target_lon = value
-        logger.info(
-            f"Extracting wind data for {loc_name} at {target_lat}, {target_lon}"
-        )
-        save_dir = f"{config.processed_data_dir}/ERA5/extract/wind_extracted_{loc_name}"
-        lat_range = [target_lat + 20, target_lat - 20]
-        lon_range = [target_lon - 20, target_lon + 20]
+    for point_name, point_config in point_configs.items():
+        save_dir = f"{config.processed_data_dir}/ERA5/extract/wind_extracted_large{point_config['suffix']}"
         extract_wind_data(
             data_dir,
             save_dir,
-            lat_range,
-            lon_range,
+            point_config["lat_range"],
+            point_config["lon_range"],
+            pool_kernel_size=4,
         )
-
-    # global
-    # global_lat_range = [71.5, -72]
-    # global_lon_range = [150.5, -90]
-
-    # global_PointB
-    # global_lat_range = [71.5, -72]
-    # global_lon_range = [90.5, -150]
-
-    # save_dir = (
-    #     f"{config.processed_data_dir}/ERA5/extract/wind_extracted_global_PointB_pool4"
-    # )
-    # extract_wind_data(
-    #     data_dir, save_dir, global_lat_range, global_lon_range, pool_kernel_size=4
-    # )
-
-    buyo_locations = {
-        "CDIP028": (34, -118.5),
-    }
-    for key, value in buyo_locations.items():
-        loc_name = key
-        target_lat, target_lon = value
-        logger.info(
-            f"Extracting wind data for {loc_name} at {target_lat}, {target_lon}"
-        )
-        save_dir = f"{config.processed_data_dir}/ERA5/extract/wind_extracted_{loc_name}"
-        lat_range = [target_lat + 20, target_lat - 20]
-        lon_range = [target_lon - 20, target_lon + 20]
-        extract_wind_data(data_dir, save_dir, lat_range, lon_range)

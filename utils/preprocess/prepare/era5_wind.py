@@ -44,28 +44,23 @@ def prepare_wind(wind_dir, save_dir, scale=False):
 if __name__ == "__main__":
     config = Config()
 
-    # for location in [
-    #     "CDIP028",
-    # ]:
-    #     wind_dir = f"{config.processed_data_dir}/ERA5/extract/wind_extracted_{location}"
-    #     save_dir = f"{config.processed_data_dir}/ERA5/input/wind_input_{location}"
-    #     prepare_wind(wind_dir, save_dir, False)
+    era5_points = {
+        # "PointA": (5, -120),  # 5°N, 120°W
+        # "PointB": (15, 115),  # 15°N, 115°E
+        "PointC": (-50, 165),  # 50°S, 165°E
+        # "CDIP028": (34, -118.5),  # 34°N, 118.5°W aka PointD
+    }
+    for location, value in era5_points.items():
+        wind_dir = f"{config.processed_data_dir}/ERA5/extract/wind_extracted_{location}"
+        save_dir = f"{config.processed_data_dir}/ERA5/input/wind_input_{location}"
+        prepare_wind(wind_dir, save_dir, False)
 
-    # era5_points = {
-    #     "PointA": (15, 115),  # 15°N, 115°E
-    #     "PointB": (5, -120),  # 5°N, 120°W
-    # }
-    # for location, value in era5_points.items():
-    #     wind_dir = f"{config.processed_data_dir}/ERA5/extract/wind_extracted_{location}"
-    #     save_dir = f"{config.processed_data_dir}/ERA5/input/wind_input_{location}"
-    #     prepare_wind(wind_dir, save_dir, False)
-
-    # location = "global_pool4"
+    # location = "large"
     # wind_dir = f"{config.processed_data_dir}/ERA5/extract/wind_extracted_{location}"
     # save_dir = f"{config.processed_data_dir}/ERA5/input/wind_input_{location}"
     # prepare_wind(wind_dir, save_dir, False)
 
-    # location = "global_PointB_pool4"
+    # location = "large_PB"
     # wind_dir = f"{config.processed_data_dir}/ERA5/extract/wind_extracted_{location}"
     # save_dir = f"{config.processed_data_dir}/ERA5/input/wind_input_{location}"
     # prepare_wind(wind_dir, save_dir, False)

@@ -42,6 +42,57 @@ def interpolate_and_extend_spectra(
     return meshf, meshd, spec
 
 
+def plot_spec1d(spec_pred2d, spec_true2d, filename, save_dir, source_type=None):
+    freq = generate_freq(spec_source_type=source_type)
+    # 生成方向数组（假设均匀分布）
+    n_dir = spec_pred2d.shape[1]
+    theta = np.linspace(0, 2 * np.pi, n_dir, endpoint=False)
+
+    # 数值积分计算一维谱（使用梯形积分法）
+    pred_1d = np.trapz(spec_pred2d, x=theta, axis=1)
+    true_1d = np.trapz(spec_true2d, x=theta, axis=1)
+
+    # 创建画布
+    plt.figure(figsize=(8, 8))
+
+    # 绘制谱线
+    plt.semilogy(freq, true_1d, label="True", color="navy", linewidth=2, alpha=0.8)
+
+    plt.semilogy(
+        freq,
+        pred_1d,
+        label="Predicted",
+        color="crimson",
+        linewidth=2,
+        linestyle="--",
+        alpha=0.8,
+    )
+
+    # 图形修饰
+    # plt.title("1D Wave Spectrum Comparison", fontsize=16, pad=20)
+    plt.xlabel("Frequency (Hz)", fontsize=30)
+    plt.ylabel("Energy Density (m²s)", fontsize=30)
+    plt.xticks(fontsize=28)
+    plt.yticks(fontsize=28)
+    plt.grid(True, which="both", linestyle="--", alpha=0.5)
+    # legend 固定在右上，50%透明度
+    # plt.legend(fontsize=30, loc="upper right", framealpha=0.5)
+    # legend 固定在右下，50%透明度
+    plt.legend(fontsize=30, loc="lower right", framealpha=0.5)
+    plt.xlim([0, freq.max()])
+
+    # 自动调整布局
+    plt.tight_layout()
+
+    # 创建保存路径
+    os.makedirs(save_dir, exist_ok=True)
+    save_path = os.path.join(save_dir, filename)
+
+    # 保存图像
+    plt.savefig(save_path, dpi=300, bbox_inches="tight")
+    plt.close()
+
+
 def plot_spec(
     spec,
     filename,

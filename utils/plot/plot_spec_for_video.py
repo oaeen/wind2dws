@@ -209,35 +209,25 @@ def process_plot(
 
 
 if __name__ == "__main__":
-    for loc in ["PointA", "PointB", "CDIP028"]:
+    samples_plot_config = {
+        "PointA": ("ERA5", 2, 0.4),
+        "PointB": ("ERA5", 3, 0.5),
+        "PointC": ("ERA5", 10, 2),
+        "CDIP028": ("IOWAGA", 1.2, 0.2),
+    }
 
-        # config
-        source_type = None
-        vmax = None
-        cb_ticks_interval = None
+    for loc in ["PointC"]:  # "PointA", "PointB", "PointC", "CDIP028"
+        source_type, vmax, cb_ticks_interval = samples_plot_config[loc]
+        logger.warning(
+            f"{loc} spec sample cbar config: vmax = {vmax}, cb_ticks_interval = {cb_ticks_interval}"
+        )
+
         isERA5 = ""
         inputRegion = "X"
-        if loc == "PointA":
-            source_type = "ERA5"
-            vmax = 3.0
-            cb_ticks_interval = 0.5
-            isERA5 = "ERA5_"
-            inputRegion = "L"
-
-        if loc == "PointB":
-            source_type = "ERA5"
-            vmax = 2.0
-            cb_ticks_interval = 0.4
-            isERA5 = "ERA5_"
-
-        if loc == "CDIP028":
-            source_type = "IOWAGA"
-            vmax = 1.2
-            cb_ticks_interval = 0.2
 
         config = Config()
         config.y_location = loc
-        comment = f"WindNet_{isERA5}{inputRegion}1010_Seele_{loc}_scale_minmax_freq_and_dir_TP80"
+        comment = f"Wendy_Full_{loc}_run1"
         spec_predict = np.load(
             f"{os.getcwd()}/results/evaluate/{loc}/{comment}/y_predict.npy"
         )
@@ -251,7 +241,8 @@ if __name__ == "__main__":
         replace_dict = {
             "PointA": "Point A",
             "PointB": "Point B",
-            "CDIP028": "Point C",
+            "PointC": "Point C",
+            "CDIP028": "Point D",
         }
 
         save_dir = f"{os.getcwd()}/results/ForVideo/{replace_dict[loc]}/"
@@ -262,7 +253,7 @@ if __name__ == "__main__":
             title_format_time = t.strftime("%H:%M:%ST %b-%d %Y")
             filename_format_time = t.strftime("%m%d-%H%M%S")
             filename = f"{replace_dict[loc]}_idx{idx:04d}_time_{filename_format_time}"
-            print(f"Plotting {filename}")
+            # print(f"Plotting {filename}")
             plot_spec_comparison(
                 spec_predict[idx],
                 spec_true[idx],

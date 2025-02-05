@@ -1,6 +1,13 @@
 import numpy as np
 import torch
 
+import sys
+import os
+
+sys.path.append(os.getcwd())
+
+from config import Config
+
 
 class Seq_Dataset(torch.utils.data.Dataset):
     """
@@ -10,21 +17,21 @@ class Seq_Dataset(torch.utils.data.Dataset):
 
     def __init__(
         self,
-        global_wind,
+        large_wind,
         local_wind,
         target_data,
-        global_window_size=8 * 10,
-        local_window_size=8 * 2,
-        steps=17,
+        large_window_size=8 * 10,
+        local_window_size=8 * 3,
+        steps=1,
     ):
 
-        self.pacific_wind = global_wind
+        self.pacific_wind = large_wind
         self.coastal_wind = local_wind
         self.target_data = target_data
-        self.pacific_window_size = global_window_size
+        self.pacific_window_size = large_window_size
         self.coastal_window_size = local_window_size
         self.steps = steps
-        self.sample_size = (len(global_wind) - global_window_size) // self.steps + 1
+        self.sample_size = (len(large_wind) - large_window_size) // self.steps + 1
 
     def __getitem__(self, idx):
         """

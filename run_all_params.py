@@ -1,155 +1,118 @@
 from datetime import datetime
 
-import torch.nn as nn
 from loguru import logger
 
 from config import Config
-from models.model import load_model
 from predict_metrics import (
     plot_output_spec_samples,
     process_predict_spec2d,
 )
-from train import build_prediction_model
+from train import build_model
 from utils.metrics.perf_recorder import *
 from utils.plot.metrics_plotter import (
     calculate_freq_cc,
+    calculate_freq_bias,
     plot_metrics,
 )
 from utils.plot.polar_spectrum import *
 
 
-def run_for_all(eval=False):
-    # double scale
-    run_config(
-        "PointA",
-        net="WindNet_ERA5_X",
-        global_wind="global_PointA_pool4",
-        y_data_source="ERA5",
-        eval=eval,
-    )
-    run_config(
-        "PointB",
-        net="WindNet_ERA5_X",
-        global_wind="global_pool4",
-        y_data_source="ERA5",
-        eval=eval,
-    )
-    run_config("CDIP028", net="WindNet_X", global_wind="global_pool4", eval=eval)
+def run_all_models():
+    locations = [
+        ("PointA", 30, "ERA5", "large"),
+        ("PointB", 30, "ERA5", "large_PB"),
+        ("CDIP028", 36, "IOWAGA", "large"),
+    ]
+    for model_name in ["Wendy", "Wendy_Large", "Wendy_Local"]:
+        configure_model(model_name, locations=locations)
 
-    # large scale
-    run_config(
-        "PointA",
-        net="WindNet_ERA5_G",
-        global_wind="global_PointA_pool4",
-        y_data_source="ERA5",
-        eval=eval,
-    )
-    run_config(
-        "PointB",
-        net="WindNet_ERA5_G",
-        global_wind="global_pool4",
-        y_data_source="ERA5",
-        eval=eval,
-    )
-    run_config(
-        "CDIP028",
-        net="WindNet_G",
-        global_wind="global_pool4",
-        eval=eval,
-    )
-
-    # Local Scale
-    run_config(
-        "PointA",
-        net="WindNet_ERA5_L",
-        global_wind="global_PointA_pool4",
-        y_data_source="ERA5",
-        batch_size=256,
-        eval=eval,
-    )
-    run_config(
-        "PointB",
-        net="WindNet_ERA5_L",
-        global_wind="global_pool4",
-        y_data_source="ERA5",
-        eval=eval,
-    )
-    run_config(
-        "CDIP028",
-        net="WindNet_L",
-        global_wind="global_pool4",
-        batch_size=256,
-        eval=eval,
-    )
+    locations = [
+        ("PointC", 30, "ERA5", "large_Full"),
+    ]
+    for model_name in ["Wendy_Full", "Wendy_Large_Full", "Wendy_Local"]:
+        configure_model(model_name, locations=locations)
 
 
-def set_config(
+def eval_all_models():
+    locations = [
+        # ("PointA", 30, "ERA5", "large"),
+        # ("PointB", 30, "ERA5", "large_PB"),
+        # ("PointC", 30, "ERA5", "large"),
+        ("CDIP028", 36, "IOWAGA", "large"),
+    ]
+    for model_name in [
+        "Wendy",
+        # "Wendy_Large",
+        # "Wendy_Local",
+    ]:  # "Wendy", "Wendy_Large", "Wendy_Local"
+        configure_model(
+            model_name, run_id=1, locations=locations, eval=True, eval_finetune=True
+        )
+
+
+def configure_model(model_name, locations, eval=False, eval_finetune=True):
+    for y_location, freq_num, y_data_source, large_wind in locations:
+        create_model(
+            model_name=model_name,
+            y_location=y_location,
+            y_data_source=y_data_source,
+            freq_num=freq_num,
+            large_wind=large_wind,
+            eval=eval,
+            eval_finetune=eval_finetune,
+        )
+
+
+def create_model(
     y_location,
-    net="WindNet_X",
-    global_wind="global",
-    local_wind_windows=8 * 2,
-    global_wind_window=8 * 10,
     y_data_source="IOWAGA",
-    batch_size=64,
+    freq_num=36,
+    model_name="Wendy",
+    large_wind="large",
+    eval=False,
+    eval_finetune=False,
 ):
     config = Config()
-
-    config.batch_size = batch_size
-    config.network_type = net
     config.y_location = y_location
-
-    config.local_wind_location = y_location
-    config.global_wind_location = global_wind
-
-    config.local_wind_window = local_wind_windows
-    config.global_wind_window = global_wind_window
-    config.input_channels = 2 * config.local_wind_window
-    config.train_steps = 1
-    config.test_steps = 1
     config.y_data_source = y_data_source
+    config.freq_num = freq_num
+    config.model_name = model_name
+    config.local_wind_location = y_location
+    config.large_wind_location = large_wind
 
     config.set_model()
-    return config
-
-
-def run_config(
-    y_location,
-    net="WindNet_X",
-    global_wind="global",
-    local_wind_windows=8 * 2,
-    global_wind_window=8 * 10,
-    y_data_source="IOWAGA",
-    batch_size=64,
-    eval=False,
-):
-    config = set_config(
-        y_location,
-        net=net,
-        global_wind=global_wind,
-        local_wind_windows=local_wind_windows,
-        global_wind_window=global_wind_window,
-        y_data_source=y_data_source,
-        batch_size=batch_size,
-    )
-
-    config.set_comment()
+    config.comment = f"{config.model_name}_{config.y_location}"
 
     time = datetime.now().strftime("%Y%m%d-%H%M%S")
     file_handler = logger.add(f"{config.get_log_dir()}/{time}.log")
     logger.info(f"config.comment: {config.comment}")
 
     if eval is False:
-        build_prediction_model(config)
+        build_model(config)
 
-    y_predict, y_true = process_predict_spec2d(config=config)
-    y_predict[y_predict < 0] = 0
-    np.save(f"{config.get_evaluate_figure_save_dir()}/y_predict.npy", y_predict)
-    np.save(f"{config.get_evaluate_figure_save_dir()}/y_true.npy", y_true)
+    y_pre_file = f"{config.get_evaluate_figure_save_dir()}/y_predict.npy"
+    y_true_file = f"{config.get_evaluate_figure_save_dir()}/y_true.npy"
+    if os.path.exists(y_pre_file) and os.path.exists(y_true_file):
+        y_predict = np.load(y_pre_file)
+        y_true = np.load(y_true_file)
+    else:
+        y_predict, y_true = process_predict_spec2d(
+            load_finetune_model=eval_finetune, config=config
+        )
+        y_predict[y_predict < 0] = 0
+        np.save(f"{config.get_evaluate_figure_save_dir()}/y_predict.npy", y_predict)
+        np.save(f"{config.get_evaluate_figure_save_dir()}/y_true.npy", y_true)
+
     freq_cc = calculate_freq_cc(y_predict, y_true)
-    # convert np array to csv and save
     np.savetxt(
         f"{config.get_evaluate_figure_save_dir()}/freq_cc.csv",
         freq_cc,
+        delimiter=",",
+    )
+    freq_bias = calculate_freq_bias(y_true, y_predict)
+    np.savetxt(
+        f"{config.get_evaluate_figure_save_dir()}/freq_bias.csv",
+        freq_bias,
         delimiter=",",
     )
     plot_metrics(y_predict[::16], y_true[::16], config)
@@ -159,4 +122,6 @@ def run_config(
 
 
 if __name__ == "__main__":
-    run_for_all(eval=True)
+
+    run_all_models()
+    # eval_all_models()

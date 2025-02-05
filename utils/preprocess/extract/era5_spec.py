@@ -73,11 +73,12 @@ if __name__ == "__main__":
     config = Config()
 
     # 提取ERA5的海浪谱数据
-    data_dir = f"Z:/Ocean/ERA5/Spec_Global/data"
+    data_dir = f"H:/ERA5/Spec_Global/data_5.0D_1H"
     save_dir = f"{config.processed_data_dir}/ERA5/extract"
     era5_points = {
-        "PointA": (15, 115),  # 15°N, 115°E
-        "PointB": (5, -120),  # 5°N, 120°W
+        # "PointA": (5, -120),  # 5°N, 120°W
+        # "PointB": (15, 115),  # 15°N, 115°E
+        "PointC": (-50, 165),  # 50°S, 165°E
     }
     for point_name, (lat, lon) in era5_points.items():
         extract_wave_data(point_name, lat, lon, data_dir, save_dir)

@@ -63,6 +63,17 @@ def calculate_freq_cc(targets, outputs):
     return freq_cc
 
 
+def calculate_freq_bias(targets, outputs):
+    _sample, freq_num, direction_num = targets.shape
+    freq_bias = []
+    for i in range(freq_num):
+        bias_i = np.mean(outputs[:, i, :] - targets[:, i, :])
+        freq_bias.append(bias_i)
+
+    freq_bias = np.array(freq_bias)
+    return freq_bias
+
+
 def plot_freq_cc(freq_cc, save_dir, filename, color="#FA7F6F", label="", start_freq=1):
     freq_num = len(freq_cc)
 
@@ -195,8 +206,8 @@ def plot_metrics(y_predict_unscale, y_true_unscale, config=Config()):
     plot_hist2d(y_true_unscale, y_predict_unscale, get_spec_desc(), config=config)
     plot_hist2d(swh_true, swh_pre, get_swh_desc(), config=config)
     plot_hist2d(mwd_true, mwd_pre, get_mwd_desc(), config=config)
-    plot_hist2d(mwp_minus1_true, mwp_minus1_pre, get_mwp_minus1_desc(), config=config)
-    plot_hist2d(mwp1_true, mwp1_pre, get_mwp1_desc(), config=config)
+    # plot_hist2d(mwp_minus1_true, mwp_minus1_pre, get_mwp_minus1_desc(), config=config)
+    # plot_hist2d(mwp1_true, mwp1_pre, get_mwp1_desc(), config=config)
     plot_hist2d(mwp2_true, mwp2_pre, get_mwp2_desc(), config=config)
 
 
@@ -215,9 +226,17 @@ def plot_hist2d(y_true, y_predict, data_description, config=Config()):
     ylabel_text = data_description["ylabel_text"]
     unit_text = data_description["unit_text"]
 
-    if data_type == "swh" and config.y_location == "CDIP067":
-        """开阔海域的浪高范围较大, 为了更好的绘图效果, 修改最大值为 8"""
-        max_value = 8
+    if data_type == "spec":
+        spec_config = {"PointA": 20, "PointB": 20, "PointC": 100, "CDIP028": 20}
+        max_value = spec_config[config.y_location]
+
+    if data_type == "swh":
+        swh_config = {"PointA": 4, "PointB": 5, "PointC": 10, "CDIP028": 3}
+        max_value = swh_config[config.y_location]
+
+    if data_type == "Tm2":
+        tm2_config = {"PointA": 14, "PointB": 12, "PointC": 14, "CDIP028": 14}
+        max_value = tm2_config[config.y_location]
 
     metrics = Spec_Metrics(source_type=config.y_data_source)
     rmse, bias, corrcoef = metrics.evaluate_predict_spec_loss(
@@ -308,7 +327,7 @@ if __name__ == "__main__":
     X_location, y_location = "46219", "CDIP028"
 
     config = Config()
-    network_type = config.network_type
+    network_type = config.model_name
     comment = config.comment
 
     loss_dir = f"{os.getcwd()}/{config.y_location}/{comment}/loss/"

@@ -113,13 +113,12 @@ def report_perf(
     记录训练过程
     """
     val_loss = val_loss_dict["loss"]
-    val_mse = val_loss_dict["MSE"]
     val_R = val_loss_dict["R"]
     logger.info(
-        f"E{current_epoch + 1} | LR: {lr} | Time: {run_time:.2f}s | Best in E{best_val_loss_epoch+1}: {best_val_loss*1e6:.0f}e-6"
+        f"E{current_epoch} | LR: {lr} | Time: {run_time:.2f}s | Best in E{best_val_loss_epoch}: {best_val_loss*1e6:.0f}e-6"
     )
     logger.info(
-        f"Train: {train_loss*1e6:.0f}e-6 | Val Loss: {val_loss*1e6:.0f}e-6 | MSE: {val_mse*1e6:.0f}e-6| R: {val_R:.4f}"
+        f"Train: {train_loss*1e6:.0f}e-6 | Val Loss: {val_loss*1e6:.0f}e-6 | R: {val_R:.4f}"
     )
 
     writer.add_scalar("Loss/train", train_loss, current_epoch)
@@ -132,7 +131,7 @@ def backup_model_and_config(config=Config()):
     将 network 模型 Python 文件 和 config 类下每个成员变量的名字和值保存到log文件夹下
     """
     log_dir = config.get_log_dir()
-    model_file = f"{os.getcwd()}/models/{config.network_type}.py"
+    model_file = f"{os.getcwd()}/models/{config.model_name}.py"
     shutil.copy(model_file, log_dir)
 
     config_dict = config.__dict__
