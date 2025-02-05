@@ -1,6 +1,6 @@
 # README
 
-This is the official implementation of the paper "Deep Learning-based Modelling of Single-Point Wave Spectra Using Double-scale Wind Inputs" by [Tianxiang Gao](https://github.com/oaeen), [Haoyu Jiang](https://orcid.org/0000-0002-3995-7382)).
+This is the official implementation of the paper "Physics-guided Deep Learning for Modelling Single-Point Wave Spectra using Wind Inputs of Two Resolutions" by [Tianxiang Gao](https://github.com/oaeen), [Haoyu Jiang](https://orcid.org/0000-0002-3995-7382)).
 
 ## Abstract
 
